@@ -1,0 +1,11 @@
+{
+  "email": "xxx@gmail.com",
+  "apiKey": "xxxxx",
+  "rootDomain": "xxx.xxx",
+  "ddnsDomain": "xxx.xxx.xxx",
+  "useIPv6": false,
+  "useConstIP": false,
+  "constIP": "",
+  "restartTime": 600,
+  "autoRun": true
+}
