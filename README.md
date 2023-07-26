@@ -5,10 +5,10 @@
 
 ```json
 {
-  "email": "xxx@gmail.com",
-  "apiKey": "xxxxx",
-  "rootDomain": "xxx.xxx",
-  "ddnsDomain": "xxx.xxx.xxx",
+  "email": "mail@example.com",
+  "apiKey": "xxxxxxxxx",
+  "rootDomain": "example.com",
+  "ddnsDomain": "ddns.example.com",
   "useIPv6": false,
   "useConstIP": false,
   "constIP": "",
@@ -19,7 +19,7 @@
 
 email，你的cloudflare电子邮件
 
-apikey，你的全局key
+apikey，你的全局key，获取： Cloudflare -> 我的个人资料 -> API令牌 -> Global API Key
 
 rootDomain，根域名
 
@@ -27,6 +27,6 @@ ddnsDomain，需要解析的二级域名 或者 根域名
 
 useIPv6，是否使用IPv6
 
-restartTime，重新运行间隔
+restartTime，重新运行间隔，单位：秒
 
 autoRun，是否自动重新运行
