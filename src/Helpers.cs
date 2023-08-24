@@ -3,6 +3,7 @@ using System.Text;
 
 namespace DDNS.CloudFlare
 {
+    public delegate bool ControlDelegate(int CtrlType);
     public static class Helpers
     {
         static bool isConfigLoaded = false;
@@ -147,11 +148,11 @@ namespace DDNS.CloudFlare
                 }
                 if (ip.Contains(value: ':') && useIPv6)
                 {
-                    domainInfo = new DomainInfo() { content = ip, name = domain, type = "AAAA" };
+                    domainInfo = new DomainInfo("AAAA", domain,ip, false);
                 }
                 else
                 {
-                    domainInfo = new DomainInfo() { content = ip, name = domain, type = "A" };
+                    domainInfo = new DomainInfo("A", domain,ip, false);
                 }
 
 
@@ -162,12 +163,16 @@ namespace DDNS.CloudFlare
                 var result = await response.Content.ReadAsStringAsync();
 
 
-                Console.WriteLine("\n" + result + "\n");
+                //Console.WriteLine("\n" + result + "\n");
 
                 try
                 {
                     var success = JObject.Parse(result)["success"].ToString();
-                    if (success == "true" || success == "True") Console.WriteLine($"成功解析 {domain} 到 {ip} ");
+                    if (success == "true" || success == "True")
+                    {
+                        Logger.Instance.WriteToFile($"成功解析 {domain} 到 {ip} ");
+                        Console.WriteLine($"成功解析 {domain} 到 {ip} ");
+                    }
                 }
                 catch (Exception)
                 {
@@ -177,6 +182,7 @@ namespace DDNS.CloudFlare
                 {
                     var code = JObject.Parse(result)["errors"][0]["code"].ToString();
                     var msg = JObject.Parse(result)["errors"][0]["message"].ToString();
+                    Logger.Instance.WriteToFile($"尝试更改IP时发送错误，CloudFlare返回：{msg}");
                     Console.WriteLine($"尝试更改IP时发送错误，CloudFlare返回：{msg}");
                 }
                 catch (Exception)
@@ -235,8 +241,64 @@ namespace DDNS.CloudFlare
             public string type;
             public string name;
             public string content;
-            public int ttl = 1;
+            public int ttl = 60;
             public bool proxied = false;
+            public string comment;
+            public DomainInfo(string type, string domain, string ip, bool proxied = false)
+            {
+                this.type = type;
+                this.name = domain;
+                this.proxied = proxied;
+                this.content = ip;
+                comment = $"Automatically updated by DDNS program at {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss UTCz")}";
+            }
+        }
+    }
+    public class Logger
+    {
+        static string LogPath = "log";
+        static string LatestLog = "log/latest.log";
+        public static Logger Instance;
+        StreamWriter sw;
+        public Logger()
+        {
+            Directory.CreateDirectory(LogPath);
+            if (File.Exists(LatestLog))
+            {
+                int repeatTimes = 1;
+                FileInfo fileInfo = new FileInfo(LatestLog);
+                DateTime creationTime = fileInfo.CreationTime;
+                string newFilePath = $"{LogPath}/{fileInfo.CreationTime.ToString("yyyy-MM-dd")}";
+                while (true)
+                {
+                    if (!File.Exists(newFilePath + $"-{repeatTimes}.log"))
+                    {
+                        File.Move(LatestLog, newFilePath + $"-{repeatTimes}.log");
+                        break;
+                    }
+                    repeatTimes++;
+                }
+            }
+            sw = File.CreateText(LatestLog);
+            Console.WriteLine("加载日志组件完成");
+            Instance = this;
+        }
+        public Logger(bool occuiped)
+        {
+            Instance = this;
+        }
+        public void WriteToFile(string msg,string thread = "Main")
+        {
+            try
+            {
+                sw.WriteLine($"{DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]")}[{thread}]{msg}");
+                sw.Flush();
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("无法写入日志！");
+            }
+            
         }
     }
 }
