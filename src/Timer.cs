@@ -1,9 +1,9 @@
 ﻿namespace DDNS.CloudFlare
 {
-    public  class TimerConut
+    public class TimerConut
     {
         public int Time;
-        public  void Run()
+        public void Run()
         {
             int countDownSeconds = 10;
             var timer = new Timer(TimerCallback, countDownSeconds, 0, 1000);
@@ -11,23 +11,17 @@
             timer.Dispose();  // 停止计时器
         }
 
-        public TimerConut(int seconds) 
-        { 
+        public TimerConut(int seconds)
+        {
             Time = seconds;
         }
-         void TimerCallback(object state)
+        void TimerCallback(object state)
         {
-            try
-            {
-                Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
-                Console.Write(new string(' ', Console.WindowWidth));  // 覆盖之前的打印内容
-                Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
-                Console.Write($"还有 {Time} 秒钟重新运行");
-            }
-            finally
-            {
-                Time--;
-            }
+            Time--;
+            Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
+            Console.Write(new string(' ', Console.WindowWidth));  // 覆盖之前的打印内容
+            Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
+            Console.Write($"还有 {Time} 秒钟重新运行");
         }
     }
 
