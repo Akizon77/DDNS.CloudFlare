@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DDNS.CloudFlare": {
+      "commandName": "Project",
+      "commandLineArgs": "-reg"
+    }
+  }
+}

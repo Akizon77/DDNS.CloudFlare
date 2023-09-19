@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,15 +19,29 @@ namespace DDNS.CloudFlare
         public bool useIPv6;
         public bool isAutoRestart;
         public int RestartTime;
+        private string jsonContent;
         public Config()
         {
-            Email = Helpers.LoadConfig("email");
-            ApiKey = Helpers.LoadConfig("apiKey");
-            RootDomain = Helpers.LoadConfig("rootDomain");
-            Domain = Helpers.LoadConfig("ddnsDomain");
-            useIPv6 = Convert.ToBoolean(Helpers.LoadConfig("useIPv6"));
-            RestartTime = Convert.ToInt32(Helpers.LoadConfig("restartTime"));
-            isAutoRestart = Convert.ToBoolean(Helpers.LoadConfig("autoRun"));
+            jsonContent = File.ReadAllText("config.json");
+            Email = LoadConfig("email");
+            ApiKey = LoadConfig("apiKey");
+            RootDomain = LoadConfig("rootDomain");
+            Domain = LoadConfig("ddnsDomain");
+            useIPv6 = bool.Parse(LoadConfig("useIPv6"));
+            RestartTime = int.Parse(LoadConfig("restartTime"));
+            isAutoRestart = bool.Parse(LoadConfig("autoRun"));
+        }
+
+        public string LoadConfig(string filed)
+        {
+            try
+            {
+                return JObject.Parse(jsonContent)[filed].ToString();
+            }
+            catch (Exception e)
+            {
+                throw new FileLoadException("无法读取配置文件", e);
+            }
         }
     }
 }
