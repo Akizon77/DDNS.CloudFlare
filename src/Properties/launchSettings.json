@@ -2,7 +2,7 @@
   "profiles": {
     "DDNS.CloudFlare": {
       "commandName": "Project",
-      "commandLineArgs": "41dw54a65"
+      "commandLineArgs": "-sr"
     }
   }
 }

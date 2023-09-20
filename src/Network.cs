@@ -109,7 +109,7 @@ namespace DDNS.CloudFlare
             }
         }
 
-        public static async Task ChangeIPAddress(Config config)
+        public static async Task ChangeIPAddress(Config config, string thread = "Program")
         {
             if (String.IsNullOrEmpty(config.ZoneID)) throw new ArgumentException("ZoneID为空，请检查网络连接");
             if (String.IsNullOrEmpty(config.DomainToken)) throw new ArgumentException("DomainToken为空，请检查网络连接 或 先在CloudFlare里解析该二级域名");
@@ -151,7 +151,7 @@ namespace DDNS.CloudFlare
                 var success = JObject.Parse(result)["success"].ToString();
                 if (success == "true" || success == "True")
                 {
-                    Logger.Instance.WriteToFile($"成功解析 {config.Domain} 到 {config.IP} ");
+                    Logger.Instance.WriteToFile($"成功解析 {config.Domain} 到 {config.IP} ","Info",thread);
                     Console.WriteLine($"成功解析 {config.Domain} 到 {config.IP} ");
                 }
                 else throw new Exception();

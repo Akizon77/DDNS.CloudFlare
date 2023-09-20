@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DDNS.CloudFlare
 {
@@ -10,42 +11,27 @@ namespace DDNS.CloudFlare
     {
         static string ProcessPath => Environment.ProcessPath;
         static string ServiceName => "TravelAroundServerDDNSService";
+        static string Description => "DDNS小程序";
         public static void Register()
         {
-            
-            //host.Run();
-
             ProcessStartInfo psi = new();
             psi.UseShellExecute = false;
-            try
-            {
-                Remove();//删除之前的服务
-                psi.FileName = $"sc";
-                psi.Arguments = $"create \"{ServiceName}\" binpath= \"{ProcessPath}\" type= share start= auto displayname= \"TravelAroundServerDDNSService\"";
-                Process.Start(psi);//新建服务
-            }
-            catch (Exception e)
-            {
-                Notifaction.SendText($"注册系统服务失败\n{e}");
-            }
-            Notifaction.SendText("成功注册系统服务\n将在开机时自动启动");
-            Thread.Sleep(1000000);
+            Remove();//删除之前的服务
+            psi.FileName = $"sc";
+            psi.Arguments = $"create {ServiceName} binpath= \"{ProcessPath} -sr\" type= share start= auto displayname= \"TravelAroundServerDDNSService\"";
+            Process.Start(psi);//新建服务
+            psi.Arguments = $"description {ServiceName} \"{Description}\"";
+            Process.Start(psi);
+
         }
         public static void Remove()
         {
-            try
-            {
-                ProcessStartInfo psi = new();
-                psi.UseShellExecute = true;
-                psi.FileName = $"sc";
-                psi.Arguments = $"delete \"{ServiceName}\"";
-                Process.Start(psi);//删除之前的服务
-                Notifaction.SendText($"已卸载系统服务");
-            }
-            catch (Exception e)
-            {
-                Notifaction.SendText($"未能卸载服务\n{e}");
-            }
+
+            ProcessStartInfo psi = new();
+            psi.UseShellExecute = false;
+            psi.FileName = $"sc";
+            psi.Arguments = $"delete {ServiceName}";
+            Process.Start(psi);//删除之前的服务
         }
         public static void Start()
         {
@@ -54,7 +40,7 @@ namespace DDNS.CloudFlare
             psi.FileName = $"cmd.exe";
             psi.Arguments = $"/c net start {ServiceName}";
             Process.Start(psi);
-            
+
         }
         public static void Stop()
         {
@@ -79,16 +65,37 @@ namespace DDNS.CloudFlare
 
     public class DDNSBackground : BackgroundService
     {
+        Logger logger => Logger.GetLogger();
+        const string thread = "Service";
+        public readonly ILogger<DDNSBackground> _logger;
+        public DDNSBackground(ILogger<DDNSBackground> l)
+        {
+            _logger = l;
+        }
         public override Task StartAsync(CancellationToken cancellationToken)
         {
+            _logger.LogInformation("服务启动");
+            logger.WriteToFile("服务启动",thread:thread);
+            //Task.Run( ()=> ExecuteAsync(cancellationToken));
             return base.StartAsync(cancellationToken);
+        }
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("服务终止");
+            logger.WriteToFile("服务终止", thread: thread);
+            return base.StopAsync(cancellationToken);
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!stoppingToken.IsCancellationRequested)
+            _logger.LogInformation("服务运行中");
+            while (!stoppingToken.IsCancellationRequested)
             {
-                Console.WriteLine(233);
+                _logger.LogInformation("服务运行中");
+                //logger.WriteToFile("服务运行中","Info",thread);
+                DDNS.DoDDNSLoop(stoppingToken.IsCancellationRequested,thread);
+                await Task.Delay(600*1000);
             }
         }
+        
     }
 }

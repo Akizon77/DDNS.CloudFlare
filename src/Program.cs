@@ -14,24 +14,25 @@ namespace DDNSProgram
 -reg 注册系统服务，开机自启
 -start 启动服务
 -stop 停止服务
--rm 卸载系统服务，停止开机自启
--sr 以CLI服务模式运行";
+-rm 卸载系统服务，停止开机自启，卸载后请务必重启系统
+-sr 以CLI服务模式运行
+";
 
 
         static int Main(string[] args)
         {
             #region 通过 IHost 创建服务
-            IHostBuilder builder = Host.CreateDefaultBuilder();
-            builder.UseWindowsService(x =>
-            {
-                x.ServiceName = ServiceName;
-            });
-            builder.ConfigureServices((content, service) =>
-            {
-                service.AddSingleton<Service>();
-                service.AddHostedService<DDNSBackground>();
-            });
-            IHost host = builder.Build();
+            IHost host = Host.CreateDefaultBuilder()
+                //.UseWindowsService(x =>
+                  // {
+                  //     x.ServiceName = ServiceName;
+                  // })
+                .ConfigureServices(service =>
+                   {
+                       //service.AddSingleton<Service>();
+                       service.AddHostedService<DDNSBackground>();
+                   })
+                .Build();
             #endregion
             #region 判断参数
             if (args.Length == 0)
@@ -54,7 +55,7 @@ namespace DDNSProgram
                     else if (x.Contains("-sr"))
                         host.Run();
                     else
-                        Console.WriteLine(CLIHelp + "\n输入的参数不正确");
+                        Console.WriteLine(CLIHelp + "输入的参数不正确");
                 });
             }
             #endregion

@@ -8,7 +8,7 @@ namespace DDNS.CloudFlare
 {
     public class DDNS
     {
-        public static async Task DoDDNSLoop()
+        public static async Task DoDDNSLoop(bool isCancel = false,string thread = "Program")
         {
 
             Logger logger;
@@ -23,14 +23,14 @@ namespace DDNS.CloudFlare
                 throw;
             }
 
-            logger.WriteToFile("开始读取配置文件");
+            logger.WriteToFile("开始读取配置文件", thread:thread);
 
             var config = Config.GetConfig();
 
-            logger.WriteToFile($"读取配置文件成功！账号: {config.Email} ,域名: {config.Domain}");
+            logger.WriteToFile($"读取配置文件成功！账号: {config.Email} ,域名: {config.Domain}",thread:thread);
 
 
-            while (true)
+            while (!isCancel)
             {
                 try
                 {
@@ -57,9 +57,9 @@ namespace DDNS.CloudFlare
                         }
 
                     }
-                    await Network.ChangeIPAddress(config);
+                    await Network.ChangeIPAddress(config,thread);
                     //计时器
-                    if (config.isAutoRestart)
+                    if (thread == "Program" && config.isAutoRestart)
                     {
                         var timer = new TimerConut(config.RestartTime);
                         timer.Run();
@@ -68,8 +68,9 @@ namespace DDNS.CloudFlare
                 }
                 catch (Exception ex)
                 {
-                    logger.WriteToFile(ex.ToString(), "Error");
+                    logger.WriteToFile(ex.ToString(), "Error",thread);
                     Console.WriteLine(ex);
+                    Thread.Sleep(5000);
                 }
                 Console.WriteLine();
             }
