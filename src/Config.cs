@@ -20,6 +20,9 @@ namespace DDNS.CloudFlare
         public bool isAutoRestart;
         public int RestartTime;
         private string jsonContent;
+
+        public static Config GetConfig() => new Config();
+
         public Config()
         {
             jsonContent = File.ReadAllText("config.json");

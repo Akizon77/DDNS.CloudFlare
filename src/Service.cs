@@ -1,27 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.ServiceProcess;
-using System.Threading.Tasks;
-using System.ComponentModel.Design;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DDNS.CloudFlare
 {
+    // 服务的使用
+    // https://learn.microsoft.com/zh-cn/dotnet/core/extensions/windows-service?pivots=dotnet-6-0
     public class Service
     {
         static string ProcessPath => Environment.ProcessPath;
         static string ServiceName => "TravelAroundServerDDNSService";
         public static void Register()
         {
+            
+            //host.Run();
+
             ProcessStartInfo psi = new();
-            psi.UseShellExecute = true;
+            psi.UseShellExecute = false;
             try
             {
                 Remove();//删除之前的服务
                 psi.FileName = $"sc";
-                psi.Arguments = $"create {ServiceName} binpath= {ProcessPath} type= own start= auto displayname= TravelAroundServerDDNSService";
+                psi.Arguments = $"create \"{ServiceName}\" binpath= \"{ProcessPath}\" type= share start= auto displayname= \"TravelAroundServerDDNSService\"";
                 Process.Start(psi);//新建服务
             }
             catch (Exception e)
@@ -29,6 +29,7 @@ namespace DDNS.CloudFlare
                 Notifaction.SendText($"注册系统服务失败\n{e}");
             }
             Notifaction.SendText("成功注册系统服务\n将在开机时自动启动");
+            Thread.Sleep(1000000);
         }
         public static void Remove()
         {
@@ -74,5 +75,20 @@ namespace DDNS.CloudFlare
         }
 
 
+    }
+
+    public class DDNSBackground : BackgroundService
+    {
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            return base.StartAsync(cancellationToken);
+        }
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            if (!stoppingToken.IsCancellationRequested)
+            {
+                Console.WriteLine(233);
+            }
+        }
     }
 }

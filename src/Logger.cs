@@ -12,6 +12,7 @@ namespace DDNS.CloudFlare
         readonly string LogPath = "logs";
         readonly string LatestLog = "logs/latest.log";
         public static Logger? Instance;
+        public static Logger GetLogger() => Instance ?? new Logger();
         StreamWriter? sw;
         public Logger()
         {
@@ -48,11 +49,11 @@ namespace DDNS.CloudFlare
         {
             Instance = this;
         }
-        public void WriteToFile(string msg, string warnLevel = "Info")
+        public void WriteToFile(string msg,string warnLevel = "Info",string thread = "Program")
         {
             try
             {
-                sw.WriteLine($"{DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]")}[{warnLevel}]{msg}");
+                sw.WriteLine($"{DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss]")}[{thread}/{warnLevel}]{msg}");
                 sw.Flush();
             }
             catch (Exception)
