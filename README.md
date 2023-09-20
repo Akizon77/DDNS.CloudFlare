@@ -1,6 +1,16 @@
 # DDNS.CloudFlare
 ### 一款极简、可自定义配置的、可自动运行的、使用.NET开发的DDNS小程序
+##### 可使用Server文件夹搭建nodejs服务器，实现掉线通知telegram
+环境搭建：
+```bash
+npm install axios --save
+node index.js
+```
+默认端口 23100
+可直接装进docker
+搭建服务器后请务必访问一次 ``` http://example.com/?cdata=c ```（如搭配使用DDNS则需要自己修改 ``` Helper.Push ``` 方法中requestUri地址）
 
+Todo : 通过配置文件修改
 ##### 配置文件介绍
 
 ```json
