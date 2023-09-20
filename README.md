@@ -11,6 +11,9 @@ node index.js
 搭建服务器后请务必访问一次 ``` http://example.com/?cdata=c ```（如搭配使用DDNS则需要自己修改 ``` Helper.Push ``` 方法中requestUri地址）
 
 Todo : 通过配置文件修改
+##### 默认15分钟检测是否掉线 
+修改 index.js 中的 15 * 60 * 1000 来更改检测时间（共两处）
+ 
 ##### 配置文件介绍
 
 ```json
