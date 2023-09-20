@@ -49,6 +49,7 @@ while (true)
             
         }
         await Helpers.ChangeIPAddress(config);
+        await Helpers.Push();
         //计时器
         if (config.isAutoRestart)
         {
@@ -61,6 +62,7 @@ while (true)
     {
         logger.WriteToFile(ex.ToString(),"Error");
         Console.WriteLine(ex);
+        Thread.Sleep(5000);
     }
     Console.WriteLine();
 }

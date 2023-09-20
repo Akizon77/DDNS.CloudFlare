@@ -9,6 +9,16 @@ namespace DDNS.CloudFlare
 
         static bool isConfigLoaded = false;
         static string Config;
+
+        public static async Task Push()
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage();
+            request.RequestUri = new Uri("https://record.akz.moe/?cdata=c");
+            request.Method = HttpMethod.Get;
+            var resopnse = await client.SendAsync(request);
+            resopnse.EnsureSuccessStatusCode();
+        }
         /// <summary>
         /// 获取区域ID
         /// </summary>
