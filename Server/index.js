@@ -60,12 +60,12 @@ setInterval(() => {
     } else {
       const lastModifiedTime = stats.mtime.getTime();
       const timeDiff = currentTime - lastModifiedTime;
-      if (timeDiff > 12 * 60 * 1000) {
+      if (timeDiff > 41 * 60 * 1000) {
         PushMessage();
       }
     }
   });
-}, 1 * 60 * 1000);
+}, 5 * 60 * 1000);
 //推送消息，直到成功
 function PushMessage() {
   axios

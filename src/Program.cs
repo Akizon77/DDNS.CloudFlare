@@ -1,73 +1,52 @@
 ﻿using DDNS.CloudFlare;
-using Newtonsoft.Json.Linq;
-using System.Runtime.InteropServices;
+using DDNS.CloudFlare.Instance;
+using DDNS.CloudFlare.Interface.Callback;
+using DDNS.CloudFlare.Interface.DomainService;
+using DDNS.CloudFlare.Interface.IP;
 
-Logger logger;
-try
+var settings = Settings.GetInstance();
+Logger logger = InitLogger();
+logger.Info("开始读取配置文件");
+IDomainService service = (settings.domain_service) switch
 {
-    logger = new Logger();
-}
-catch (Exception e)
-{
-    Console.WriteLine(e);
-    Thread.Sleep(5000);
-    throw;
-}
-
-logger.WriteToFile("开始读取配置文件");
-
-var config = new Config();
-
-logger.WriteToFile($"读取配置文件成功！账号: {config.Email} ,域名: {config.Domain}");
-
+    "cloudflare" => new Cloudflare(settings.cloudflare, new IPv4(), new URLCallback()),
+    _ => throw new NotImplementedException("请检查配置文件，服务商目前仅支持Cloudflare，如需添加请向/Interface/DomainService添加源文件并编译")
+};
 
 while (true)
 {
     try
     {
-        Console.WriteLine($"本次解析 {config.Domain} 到本机地址");
-        config.IP = await Helpers.GetMyIPAddress(config.useIPv6);
-        Console.WriteLine($"本机公网IP : {config.IP}");
-        try
+        Run(service);
+        if (settings.auto_restart)
         {
-            config.ZoneID = await Helpers.GetZoneID(config);
-            config.DomainToken = await Helpers.GetSecondLevelDomainID(config);
-        }
-        catch (Exception ex)
-        {
-            //账号或API错误会直接throw，否则是网络暂时不佳导致的错误
-            //由于导致错误的原因已知（使用参数异常和网络异常区分），故CA2200警告可以忽略
-            //使用了新的变量ae，警告已消除
-            if(ex is ArgumentException ae) throw ae;
-            //此前获取到DomainToken 会忽略异常
-            if (!String.IsNullOrEmpty(config.DomainToken))
-            {
-                Console.WriteLine("捕获到可接受的异常");
-                Console.WriteLine(ex);
-                Console.WriteLine("由于ZoneID不会影响解析结果，故跳过此步骤");
-            }
-            
-        }
-        await Helpers.ChangeIPAddress(config);
-        await Helpers.Push();
-        //计时器
-        if (config.isAutoRestart)
-        {
-            var timer = new TimerConut(config.RestartTime);
+            var timer = new TimerConut(settings.intervals);
             timer.Run();
         }
-        else break;
+        else
+            break;
     }
-    catch(Exception ex)
+    catch (Exception e)
     {
-        logger.WriteToFile(ex.ToString(),"Error");
-        Console.WriteLine(ex);
-        Thread.Sleep(5000);
+        logger.Error(e.ToString());
+        Console.WriteLine("Will automatically restart in 30 seconds.");
+        Thread.Sleep(new TimeSpan(0, 0, 30));
     }
-    Console.WriteLine();
 }
-
-
-/* 运行逻辑：
- * 1.读取配置文件
- */
+void Run(IDomainService domainService)
+{
+    domainService.Update();
+}
+Logger InitLogger()
+{
+    try
+    {
+        return new Logger();
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);
+        Thread.Sleep(5000);
+        throw;
+    }
+}

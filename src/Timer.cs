@@ -3,6 +3,7 @@
     public class TimerConut
     {
         public int Time;
+
         public void Run()
         {
             int countDownSeconds = 10;
@@ -15,17 +16,15 @@
         {
             Time = seconds;
         }
-        void TimerCallback(object state)
+
+        private void TimerCallback(object state)
         {
             Time--;
+            if (Time < 0) return;
             Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
             Console.Write(new string(' ', Console.WindowWidth));  // 覆盖之前的打印内容
             Console.SetCursorPosition(0, Console.CursorTop);  //将光标移动到行的开头
             Console.Write($"还有 {Time} 秒钟重新运行");
         }
     }
-
-
-
 }
-
