@@ -22,7 +22,7 @@ while (true)
         dDNSers.ForEach(service =>
         {
            //tasks.Add( service.Run());
-           service.Run().GetAwaiter();
+           service.Run().GetAwaiter().GetResult();
         });
         //Task.WhenAll(tasks).GetAwaiter();
         
