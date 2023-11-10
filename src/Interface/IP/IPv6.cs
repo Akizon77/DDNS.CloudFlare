@@ -4,6 +4,7 @@
     {
         public Task<string> Get()
         {
+            //TODO:IPv6
             throw new NotImplementedException();
         }
     }

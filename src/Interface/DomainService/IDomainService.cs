@@ -10,5 +10,8 @@
         }
 
         abstract Task UpdateAsync();
+        //TODO:Task<bool> Update(string ip)
+        //TODO:string GetLastUpdataIP()
+        
     }
 }
