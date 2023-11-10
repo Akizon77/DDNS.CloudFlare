@@ -11,9 +11,7 @@ namespace DDNS.CloudFlare.Instance
         private static readonly object lockObject = new object();
         private static readonly string path = "ddns_config.json";
 
-        [Obsolete("Do not create a new instance, it is a singleton run")]
-        public Settings()
-        { }
+        public Settings() { }
 
         public static Settings CreateNew()
         {
@@ -34,11 +32,38 @@ namespace DDNS.CloudFlare.Instance
             try
             {
                 var contents = File.ReadAllText(path);
-                return JObject.Parse(contents).ToObject<Settings>();
+                var j = JObject.Parse(contents);
+                //return JObject.Parse(contents).ToObject<Settings>()
+                //    ?? throw new ArgumentNullException("Please cheak config file.");
+                var s = new List<Cloudflare.Config>();
+                foreach ( var item in j["services"] ) 
+                {
+                    var cbs = new List<object>();
+                    foreach (var cb in item["callbacks"])
+                    {
+                        cbs.Add(cb.ToObject<URLCallback.Config>());
+                    }
+                    s.Add(new Cloudflare.Config()
+                    {
+                        ApiKey = item["ApiKey"].ToString(),
+                        name = item["name"].ToString(),
+                        Email = item["Email"].ToString(),
+                        Domain = item["Domain"].ToString(),
+                        callbacks = cbs
+                    }) ;
+                }
+                return new()
+                {
+                    auto_restart = j["auto_restart"].ToObject<bool>(),
+                    intervals = j["intervals"].ToObject<int>(),
+                    debug = j["debug"].ToObject<bool>(),
+                    services = s,
+                };
             }
             catch (Exception)
             {
-                return new Settings();
+                Logger.Warn("No config file,creating new");
+                return CreateNew();
             }
         }
 
@@ -54,6 +79,7 @@ namespace DDNS.CloudFlare.Instance
                         if (instance == null)
                         {
                             instance = Load();
+                            
                         }
                     }
                 }
@@ -63,18 +89,71 @@ namespace DDNS.CloudFlare.Instance
 
         public static Settings GetInstance() => Instance;
 
+        public static List<IDomainService> DomainServices
+        {
+            get
+            {
+                //try
+                //{
+                //    var domainServices = new List<IDomainService>();
+                //    Instance.services.ForEach(x =>
+                //    {
+                //        var jobject = x as JObject;
+                //        try
+                //        {
+                //            domainServices.Add(new Cloudflare(jobject.ToObject<Cloudflare.Config>()));
+                //        }
+                //        catch { } 
+                //    });
+                //    return domainServices;
+                //}
+                //catch (Exception e)
+                //{
+                //    throw new ArgumentNullException("无法加载域名提供商，请检查配置文件", e);
+                //}
+                var domainServices = new List<IDomainService>();
+                foreach (var item in instance.services)
+                {
+                    domainServices.Add(new Cloudflare(item));
+                }
+                return domainServices;
+            }
+        }
+
+        public static List<ICallbacker> Callbackers(Cloudflare.Config o)
+        {
+            try
+            {
+                var callbackers = new List<ICallbacker>();
+                o.callbacks.ForEach(x =>
+                {
+                    if (x is URLCallback.Config c)
+                        callbackers.Add(new URLCallback(c));
+                    if (x is RunCommand.Config r)
+                        callbackers.Add(new RunCommand(r));
+                });
+                return callbackers;
+            }
+            catch
+            {
+                Logger.Warn($"{o.name.ToUpper()}:{o.Email} 无法加载回调，请检查配置文件");
+                return new List<ICallbacker>();
+            }
+        }
+
         // 其他设置相关的方法和属性
         public bool auto_restart = true;
 
         public int intervals = 600;
-        public string domain_service = "cloudflare";
+        //public string domain_service = "cloudflare";
 #if DEBUG
         public bool debug = true;
 #else
         public bool debug = false;
 #endif
-        public URLCallback.Config callback_url = new();
-        public RunCommand.Config callback_action = new();
-        public Cloudflare.Config cloudflare = new();
+        public List<Cloudflare.Config> services = new() { new Cloudflare.Config() };
+        //public URLCallback.Config callback_url = new();
+        //public RunCommand.Config callback_action = new();
+        //public Cloudflare.Config cloudflare = new();
     }
 }

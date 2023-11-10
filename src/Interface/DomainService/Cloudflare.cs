@@ -10,7 +10,6 @@ namespace DDNS.CloudFlare.Interface.DomainService
     public class Cloudflare : IDomainService
     {
         private readonly Config cfg;
-        private Logger logger => Logger.Instance;
 
         private string rootDomain
         {
@@ -26,31 +25,35 @@ namespace DDNS.CloudFlare.Interface.DomainService
             get => _lastupdateip;
             private set { _lastupdateip = value; }
         }
-
-        private string ZoneID;
-        private string DomainID;
-        private string IP;
-        private IObtainer ip_obtainer;
-        private string _lastupdateip;
-        private ICallbacker callbacker;
-
-        public Cloudflare(Config cfg, IObtainer ip_obtainer, ICallbacker callbacker)
+        private bool ipchanged = true;
+        public bool IPChanged
         {
-            this.callbacker = callbacker;
-            logger.Info($"Cloudflare配置已读取！账号: {cfg.Email} ,域名: {cfg.Domain}");
-            this.cfg = cfg;
-            this.ip_obtainer = ip_obtainer;
+            get => ipchanged;
+            set => ipchanged = value;
         }
 
-        public async Task UpdateAsync()
+        private string? ZoneID;
+        private string? DomainID;
+        private string IP;
+        private string _lastupdateip = string.Empty;
+
+        public Cloudflare(Config cfg)
         {
-            IP = await ip_obtainer.Get();
+            IP = "";
+            Logger.Info($"Cloudflare配置已读取！账号: {cfg.Email} ,域名: {cfg.Domain}");
+            this.cfg = cfg;
+        }
+
+        public async Task<bool> UpdateAsync(string ip)
+        {
+            IP = ip;
             if (LastUpdateIP == IP)
             {
-                logger.Warn($"检测到IP({IP})无变化，跳过解析");
-                return;
+                IPChanged = false;
+                Logger.Warn($"检测到IP({IP})无变化，跳过解析");
+                return false;
             }
-            logger.Debug($"Obtained the local IP: {IP}");
+            Logger.Debug($"Obtained the local IP: {IP}");
             await UpdateZoneID();
             if (!await UpdateDomainID())
                 await CreateSubDomain();
@@ -58,14 +61,17 @@ namespace DDNS.CloudFlare.Interface.DomainService
                 await ChangeIPAddress();
 
             LastUpdateIP = IP;
-            callbacker.Call(this);
+            IPChanged = true;
+            return true;
         }
 
         public class Config
         {
-            public string Email;
-            public string ApiKey;
-            public string Domain;
+            public string name = "cloudflare";
+            public string Email = "mail@example.com";
+            public string ApiKey = "YOUR_GLOBA_API_KEY";
+            public string Domain = "ddns.example.com";
+            public List<object> callbacks = new() { new URLCallback.Config() };
 
             //public bool Ipv6;
 
@@ -86,27 +92,27 @@ namespace DDNS.CloudFlare.Interface.DomainService
             //存在ZoneID直接跳过
             if (!String.IsNullOrEmpty(ZoneID))
             {
-                logger.Debug("ZoneID already exists, skipping");
+                Logger.Debug("ZoneID already exists, skipping");
                 return;
             }
-            logger.Debug("Requesting ZoneID");
+            Logger.Debug("Requesting ZoneID");
             var result = await Get("https://api.cloudflare.com/client/v4/zones");
             // ↑ HTTP请求
             try
             {
                 //尝试解析返回内容
                 var json = JObject.Parse(result);
-                logger.Debug($"Get root domain name by string manipulation：{rootDomain}");
+                Logger.Debug($"Get root domain name by string manipulation：{rootDomain}");
                 var zoneID = json["result"].First(v => v["name"].ToString() == rootDomain)["id"];
                 //更新ZoneID
                 ZoneID = zoneID.ToString();
-                logger.Debug($"ZoneID: {ZoneID[0..6]}xxxxxxxxxxxx");
+                Logger.Debug($"ZoneID: {ZoneID[0..6]}xxxxxxxxxxxx");
             }
             catch (Exception e)
             {
                 //logger.Error(e.ToString());
                 var j = JObject.Parse(result);
-                logger.Error(j["errors"].ToString());
+                Logger.Error(j["errors"].ToString());
                 var errCode = j["errors"][0]["code"].ToString();
                 var errMsg = j["errors"][0]["message"].ToString();
                 //↑ 解析错误代码
@@ -122,32 +128,39 @@ namespace DDNS.CloudFlare.Interface.DomainService
             }
         }
 
-        //获取二级ID
+        /// <summary>
+        /// 存在域名返回true
+        /// 不存在返回false
+        /// </summary>
+        /// <returns>存在域名返回true 不存在返回false</returns>
+        /// <exception cref="InvalidDataException"></exception>
         private async Task<bool> UpdateDomainID()
         {
             //存在DomainID直接跳过
             if (!String.IsNullOrEmpty(DomainID))
             {
-                logger.Debug("DomainID already exists, skipping");
+                Logger.Debug("DomainID already exists, skipping");
                 return true;
             }
-            logger.Debug("Requesting DomainID");
+            Logger.Debug("Requesting DomainID");
             try
             {
                 var result = await Get(
                     $"https://api.cloudflare.com/client/v4/zones/{ZoneID}/dns_records"
                 );
                 var j = JObject.Parse(result);
+#pragma warning disable CS8602 // 解引用可能出现空引用。
                 var secondID = j["result"].First(v => v["name"].ToString() == cfg.Domain)[
                     "id"
                 ].ToString();
+
                 if (String.IsNullOrEmpty(secondID))
                     throw new InvalidDataException("数据为空");
                 DomainID = secondID;
-                logger.Debug($"DomainID: {secondID[0..6]}xxxxxxxxxxxx");
+                Logger.Debug($"DomainID: {secondID[0..6]}xxxxxxxxxxxx");
                 return true;
             }
-            catch (Exception e)
+            catch 
             {
                 return false;
             }
@@ -155,9 +168,9 @@ namespace DDNS.CloudFlare.Interface.DomainService
 
         private async Task CreateSubDomain()
         {
-            logger.Debug("Subdomain not exist, creating");
+            Logger.Debug("Subdomain not exist, creating");
             DomainInfo domainInfo;
-            if (IP.Contains(value: ':'))
+            if (IP is not null && IP.Contains(value: ':'))
             {
                 domainInfo = new DomainInfo("AAAA", cfg.Domain, IP, false);
             }
@@ -180,7 +193,7 @@ namespace DDNS.CloudFlare.Interface.DomainService
             var success = j["success"].ToObject<Boolean>();
             if (success)
             {
-                Logger.Instance.Info($"成功解析 {cfg.Domain} 到 {IP} ");
+                Logger.Info($"成功解析 {cfg.Domain} 到 {IP} ");
             }
             else
             {
@@ -201,7 +214,7 @@ namespace DDNS.CloudFlare.Interface.DomainService
                 throw new ArgumentException("DomainToken为空，请检查网络连接 或 先在CloudFlare里解析该二级域名");
 
             DomainInfo domainInfo;
-            if (IP.Contains(value: ':'))
+            if (IP is not null && IP.Contains(value: ':'))
             {
                 domainInfo = new DomainInfo("AAAA", cfg.Domain, IP, false);
             }
@@ -220,7 +233,7 @@ namespace DDNS.CloudFlare.Interface.DomainService
                 var success = JObject.Parse(result)["success"].ToString();
                 if (success == "true" || success == "True")
                 {
-                    Logger.Instance.Info($"成功解析 {cfg.Domain} 到 {IP} ");
+                    Logger.Info($"成功解析 {cfg.Domain} 到 {IP} ");
                 }
             }
             catch (Exception)
@@ -253,8 +266,21 @@ namespace DDNS.CloudFlare.Interface.DomainService
         {
             return await Get(url, body, HttpMethod.Post);
         }
-    }
 
+        public async Task<string> Callback(params string[] args)
+        {
+            var cbs = Settings.Callbackers(cfg);
+            StringBuilder sb = new StringBuilder();
+            foreach (var cb in cbs)
+            {
+                var r = await cb.CallAsync(args);
+                sb.AppendLine(r);
+            }
+            
+            return sb.ToString();
+        }
+    }
+#pragma warning restore CS8602 // 解引用可能出现空引用。
     internal class DomainInfo
     {
         public string type;

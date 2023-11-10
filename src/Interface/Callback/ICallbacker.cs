@@ -4,7 +4,8 @@ namespace DDNS.CloudFlare.Interface.Callback
 {
     public interface ICallbacker
     {
-        public abstract void Call(IDomainService domainService);
+        public string Call(params string[] args) => CallAsync(args).GetAwaiter().GetResult();
+        public abstract Task<string> CallAsync(params string[] args);
         
     }
 }

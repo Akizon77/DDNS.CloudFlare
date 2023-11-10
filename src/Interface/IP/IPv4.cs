@@ -6,7 +6,7 @@ namespace DDNS.CloudFlare.Interface.IP
 {
     public class IPv4 : IObtainer
     {
-        private Logger logger => Logger.Instance;
+        private Logger Logger => Logger.Instance;
         private List<string> ips = new();
 
         private readonly string[] interfaces =
@@ -30,11 +30,11 @@ namespace DDNS.CloudFlare.Interface.IP
                     if (String.IsNullOrWhiteSpace(ip))
                         continue;
                     ips.Add(ip);
-                    logger.Debug($"Get your IP:{ip} form {item}");
+                    Logger.Debug($"Get your IP:{ip} form {item}");
                 }
                 catch (Exception e)
                 {
-                    logger.Warn($"Unable to get local IP by {item}, because {e.Message}");
+                    Logger.Warn($"Unable to get local IP by {item}, because {e.Message}");
                 }
             }
             try
@@ -43,14 +43,14 @@ namespace DDNS.CloudFlare.Interface.IP
                 var loliip = await EasyHttp.Get("https://net.lolicon.app/detail");
                 var bj = JObject.Parse(bilibiliip)["data"]["addr"].ToString();
                 ips.Add(bj);
-                logger.Debug($"Get your IP:{bj} form http://api.bilibili.com/x/web-interface/zone");
+                Logger.Debug($"Get your IP:{bj} form http://api.bilibili.com/x/web-interface/zone");
                 var lj = JObject.Parse(loliip)["ip"].ToString();
                 ips.Add(lj);
-                logger.Debug($"Get your IP:{lj} form https://net.lolicon.app/detail");
+                Logger.Debug($"Get your IP:{lj} form https://net.lolicon.app/detail");
             }
             catch (Exception e)
             {
-                logger.Warn($"Unable to get local IP by bilibili or cloudflare, because {e.Message}");
+                Logger.Warn($"Unable to get local IP by bilibili or cloudflare, because {e.Message}");
             }
             for (int i = 0; i < ips.Count; i++)
             {

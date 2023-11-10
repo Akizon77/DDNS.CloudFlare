@@ -5,19 +5,27 @@ using DDNS.CloudFlare.Interface.DomainService;
 using DDNS.CloudFlare.Interface.IP;
 
 var settings = Settings.GetInstance();
-Logger logger = InitLogger();
-logger.Info("开始读取配置文件");
-IDomainService service = (settings.domain_service) switch
+Logger.Info("开始读取配置文件");
+var domainServices = Settings.DomainServices;
+var callbacks = Settings.Callbackers;
+List<DDNSer> dDNSers = new List<DDNSer>();
+foreach (var service in domainServices)
 {
-    "cloudflare" => new Cloudflare(settings.cloudflare, new IPv4(), new URLCallback()),
-    _ => throw new NotImplementedException("请检查配置文件，服务商目前仅支持Cloudflare，如需添加请向/Interface/DomainService添加源文件并编译")
-};
-
+    dDNSers.Add(new(service,new IPv4()));
+}
+List<Task> tasks = new List<Task>();
 while (true)
 {
     try
     {
-        Run(service);
+
+        dDNSers.ForEach(service =>
+        {
+           //tasks.Add( service.Run());
+           service.Run().GetAwaiter();
+        });
+        //Task.WhenAll(tasks).GetAwaiter();
+        
         if (settings.auto_restart)
         {
             var timer = new TimerConut(settings.intervals);
@@ -28,25 +36,27 @@ while (true)
     }
     catch (Exception e)
     {
-        logger.Error(e.ToString());
+        Logger.Error(e.ToString());
         Console.WriteLine("Will automatically restart in 30 seconds.");
         Thread.Sleep(new TimeSpan(0, 0, 30));
     }
 }
-void Run(IDomainService domainService)
+class DDNSer
 {
-    domainService.Update();
-}
-Logger InitLogger()
-{
-    try
+    IDomainService domainService;
+    IObtainer obtainer;
+    public DDNSer(IDomainService domainService, IObtainer obtainer)
     {
-        return new Logger();
+        this.domainService = domainService;
+        this.obtainer = obtainer;
     }
-    catch (Exception e)
+    public async Task Run()
     {
-        Console.WriteLine(e);
-        Thread.Sleep(5000);
-        throw;
+        var ip = await obtainer.Get();
+        await domainService.UpdateAsync(ip);
+        await domainService.Callback(ip);
     }
+
 }
+
+

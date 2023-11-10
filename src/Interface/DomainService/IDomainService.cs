@@ -2,16 +2,18 @@
 {
     public interface IDomainService
     {
+        public abstract Task<string> Callback(params string[] args);
         public string LastUpdateIP { get; }
+        public bool IPChanged { get; }
 
-        public void Update()
+        public bool Update(string ip)
         {
-            UpdateAsync().GetAwaiter().GetResult();
+            return UpdateAsync(ip).GetAwaiter().GetResult();
         }
 
-        abstract Task UpdateAsync();
+        abstract Task<bool> UpdateAsync(string ip);
         //TODO:Task<bool> Update(string ip)
-        //TODO:string GetLastUpdataIP()
-        
+        public string GetLastUpdataIP() => LastUpdateIP;
+
     }
 }

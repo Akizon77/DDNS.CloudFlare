@@ -1,11 +1,34 @@
-﻿namespace DDNS.CloudFlare.Instance
+﻿using System.Diagnostics;
+
+namespace DDNS.CloudFlare.Instance
 {
     public class Logger
     {
         private readonly string LogPath = "logs";
         private readonly string LatestLog = "logs/latest.log";
-        public static Logger? Instance;
-        private StreamWriter? sw;
+#pragma warning disable CS8618
+        public static Logger instance;
+        private static readonly object lockObject = new object();
+        public static Logger Instance
+        {
+            get
+            {
+                // 使用双重锁定确保线程安全
+                if (instance == null)
+                {
+                    lock (lockObject)
+                    {
+                        if (instance == null)
+                        {
+                            instance = new();
+                        }
+                    }
+                }
+                return instance;
+            }
+        }
+
+        private StreamWriter sw;
 
         public Logger()
         {
@@ -39,16 +62,11 @@
             }
             //必须单个实例，否则文件会被多个实例占用导致无法写入
             sw = File.CreateText(LatestLog);
-            Instance = this;
         }
 
-        public Logger(bool occuiped)
-        {
-            Instance = this;
-        }
 
-        [Obsolete("Use Info(),Warn(),Error() or Debug() instead")]
-        public void WriteToFile(string msg, string warnLevel = "Info")
+        [DebuggerHidden]
+        private void WriteToFile(string msg, string warnLevel = "Info")
         {
             try
             {
@@ -84,25 +102,15 @@
             }
         }
 
-        public void Error(string msg)
-        {
-            WriteToFile(msg, "Error");
-        }
+        
 
-        public void Info(string msg)
+        public static void Error(string msg) => Instance.WriteToFile(msg, "Error");
+        public static void Info(string msg) => Instance.WriteToFile(msg, "Info");
+        public static void Debug(string msg)
         {
-            WriteToFile(msg, "Info");
+            if (Settings.Instance.debug) Instance.WriteToFile(msg, "Debug");
         }
+        public static void Warn(string msg) => Instance.WriteToFile(msg, "Warn");
 
-        public void Warn(string msg)
-        {
-            WriteToFile(msg, "Warn");
-        }
-
-        public void Debug(string msg)
-        {
-            if (Settings.Instance.debug)
-                WriteToFile(msg, "Debug");
-        }
     }
 }
