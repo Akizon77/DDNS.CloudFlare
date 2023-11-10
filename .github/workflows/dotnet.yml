@@ -27,8 +27,11 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release
       working-directory: ./src
-    - name: Publish
-      run: dotnet publish --configuration Release --output ./publish
+    - name: Publish linux
+      run: dotnet publish --configuration Release --output ./publish/linux --runtime linux-x64
+      working-directory: ./src
+    - name: Publish window
+      run: dotnet publish --configuration Release --output ./publish/win --runtime win-x64
       working-directory: ./src
 
     - name: Deploy
